@@ -44,7 +44,7 @@ marshmallow==3.21.3
 multidict==6.0.5
 mypy-extensions==1.0.0
 nltk==3.8.1
-numpy==2.2.6
+numpy==1.26.4
 orjson==3.10.6
 packaging==24.1
 proto-plus==1.24.0
@@ -61,8 +61,8 @@ PyYAML==6.0.1
 regex==2024.5.15
 requests==2.32.3
 rsa==4.9
-scikit-learn==1.6.1
-scipy==1.15.3
+scikit-learn==1.5.1
+scipy==1.13.1
 SpeechRecognition==3.10.4
 SQLAlchemy==2.0.31
 sqlparse==0.5.0
@@ -78,3 +78,5 @@ urllib3==2.2.2
 whitenoise==6.7.0
 yarl==1.9.4
 gunicorn==21.2.0
+groq==0.9.0
+pandas==2.2.2
