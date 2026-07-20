@@ -4,12 +4,18 @@ import { useSelector } from 'react-redux'
 import Navbar from '../components/Navbar'
 
 const CAREERS = {
-  0: "Network Security Engineer", 1: "Software Engineer",
-  2: "UI/UX Engineer", 3: "Software Developer",
-  4: "Database Developer", 5: "QA Engineer",
-  6: "Web Developer", 7: "CRM Technical Developer",
-  8: "Technical Supporter", 9: "Systems Security Administrator",
-  10: "Applications Developer", 11: "Mobile Applications Developer",
+  0: "Applications Developer",
+  1: "CRM Technical Developer",
+  2: "Database Developer",
+  3: "Mobile Applications Developer",
+  4: "Network Security Engineer",
+  5: "Software Developer",
+  6: "Software Engineer",
+  7: "Software Quality Assurance (QA) / Testing",
+  8: "Systems Security Administrator",
+  9: "Technical Support",
+  10: "UX Designer",
+  11: "Web Developer",
 }
 
 const ROADMAPS = {

@@ -6,78 +6,88 @@ from dotenv import load_dotenv
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from google import genai
-from google.genai import types
+from groq import Groq
 
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-API_KEY = os.environ.get("GOOGLE_API_KEY")
-client = genai.Client(api_key=API_KEY) if API_KEY else None
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 SYSTEM_PROMPT = """You are CareerSense AI, a career advisor for IT students at FUOYE, Nigeria.
-
-YOUR GOAL: Predict the user's ideal IT career in as few messages as possible (maximum 4 exchanges).
-
-STRICT RULES:
-- Ask MAXIMUM 2 short questions per message
-- After 3-4 exchanges, you MUST make a prediction — do not keep asking
-- Be brief and friendly — no long paragraphs
-- When ready to predict (after 3-4 exchanges), end your response with this exact JSON on a new line:
-{"ready_to_predict": true, "answers": {"q1": <logical_reasoning 1-9>, "q2": <hackathons 0-6>, "q3": <coding_skill 1-9>, "q4": <public_speaking 1-9>, "q5": <self_learning 0 or 1>, "q6": <extra_courses 0 or 1>, "q7": "<one of: R Programming/Information Security/Shell Programming/Machine Learning/Full Stack/Hadoop/Python/Distro Making/App Development>", "q8": "<one of: Database Security/System Designing/Web Technologies/Machine Learning/Hacking/Testing/Data Science/Game Development/Cloud Computing>", "q9": <reading_writing 0-2>, "q10": <memory 0-2>, "q11": <subject_interest 0-9>, "q12": <career_area 0-5>, "q13": <company_type 0-9>, "q14": <takes_advice 0 or 1>, "q15": <books 0-30>, "q16": <management 0 or 1>, "q17": <work_style 0 or 1>, "q18": <team_work 0 or 1>, "q19": <introvert 0 or 1>}}
-
-FLOW:
-1. First message: Ask about their top IT interest AND coding skill (rate 1-9)
-2. Second message: Ask about work style (team/solo, creative/analytical) AND goals
-3. Third message: Ask one more clarifying question if needed, then predict
-4. By message 4: ALWAYS produce the JSON prediction — never ask more questions
-
-Use defaults for anything not mentioned (coding=5, logic=5, etc.). Make reasonable inferences."""
+Goal: predict the user's ideal IT career in max 4 exchanges.
+Rules:
+- Ask max 2 short questions per message. Be brief and friendly.
+- By message 4, ALWAYS produce the prediction JSON — never keep asking.
+- Output the JSON as plain text on a new line — NO markdown, NO code fences, NO backticks.
+- End your final response with exactly this JSON:
+{"ready_to_predict":true,"answers":{"q1":<1-9>,"q2":<0-6>,"q3":<1-9>,"q4":<1-9>,"q5":<0-1>,"q6":<0-1>,"q7":"<Full Stack|Python|Machine Learning|App Development|Information Security|Shell Programming|R Programming|Hadoop|Distro Making>","q8":"<Web Technologies|Data Science|Machine Learning|Cloud Computing|Database Security|System Designing|Hacking|Testing|Game Development>","q9":<0-2>,"q10":<0-2>,"q11":<0-9>,"q12":<0-5>,"q13":<0-9>,"q14":<0-1>,"q15":<0-30>,"q16":<0-1>,"q17":<0-1>,"q18":<0-1>,"q19":<0-1>}}
+Use defaults (5 for numeric, "Python"/"Web Technologies") for anything unknown."""
 
 
 class ChatbotView(APIView):
     def post(self, request):
         if not client:
             return Response(
-                {'response': 'AI service not configured. Please contact admin.', 'error': 'Missing GOOGLE_API_KEY'},
+                {'response': 'AI service not configured.', 'error': 'Missing GROQ_API_KEY'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         try:
             message = request.data.get('message', '')
             history = request.data.get('history', [])
 
-            # Build conversation for Gemini
-            contents = []
-            for msg in history[-8:]:  # Keep last 8 messages only
-                role = 'user' if msg['role'] == 'user' else 'model'
-                contents.append(types.Content(role=role, parts=[types.Part(text=msg['content'])]))
-            contents.append(types.Content(role='user', parts=[types.Part(text=message)]))
+            # Build messages for Groq (OpenAI-compatible format)
+            messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-            response = client.models.generate_content(
-                model='gemini-2.5-flash-lite',
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    temperature=0.5,
-                    max_output_tokens=400,  # Keep responses short
-                )
+            # Keep last 6 messages for context
+            for msg in history[-6:]:
+                role = 'user' if msg['role'] == 'user' else 'assistant'
+                messages.append({"role": role, "content": msg['content']})
+
+            messages.append({"role": "user", "content": message})
+
+            response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=messages,
+                temperature=0.5,
+                max_tokens=350,
             )
-            response_text = response.text
 
-            # Check if AI included prediction JSON
+            response_text = response.choices[0].message.content
+
             prediction = None
             probability = None
 
-            if '"ready_to_predict": true' in response_text:
+            if '"ready_to_predict"' in response_text:
                 try:
-                    json_start = response_text.rfind('{')
-                    json_end = response_text.rfind('}') + 1
-                    json_str = response_text[json_start:json_end]
-                    pred_data = json.loads(json_str)
-                    if pred_data.get('ready_to_predict'):
-                        answers = pred_data.get('answers', {})
-                        prediction, probability = make_prediction(answers)
-                        response_text = response_text[:json_start].strip()
+                    import re
+                    # Remove markdown code fences
+                    clean = re.sub(r'```(?:json)?', '', response_text).replace('```', '')
+
+                    # Find the outermost JSON object
+                    start = clean.find('{')
+                    if start != -1:
+                        depth = 0
+                        end = start
+                        for i, ch in enumerate(clean[start:], start):
+                            if ch == '{': depth += 1
+                            elif ch == '}':
+                                depth -= 1
+                                if depth == 0:
+                                    end = i + 1
+                                    break
+                        json_str = clean[start:end]
+                        pred_data = json.loads(json_str)
+                        if pred_data.get('ready_to_predict'):
+                            answers = pred_data.get('answers', {})
+                            prediction, probability = make_prediction(answers)
+                            # Remove everything from the JSON start onward
+                            orig_start = response_text.find('{')
+                            response_text = response_text[:orig_start].strip()
+                            # Also clean any trailing code fences
+                            response_text = re.sub(r'```+', '', response_text).strip()
+                            if not response_text:
+                                response_text = "Based on our conversation, here is your predicted IT career path!"
                 except Exception as e:
                     logger.error(f"Failed to parse prediction JSON: {e}")
 
@@ -90,7 +100,7 @@ class ChatbotView(APIView):
         except Exception as e:
             logger.error(f"Chat error: {e}")
             return Response(
-                {'error': str(e), 'response': f'Sorry, I encountered an error. Please try again.'},
+                {'error': str(e), 'response': 'Sorry, I encountered an error. Please try again.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

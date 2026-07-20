@@ -4,6 +4,7 @@ const initialState = {
   messages: [],
   prediction: null,
   probability: null,
+  currentSessionId: null,
 }
 
 const chatSlice = createSlice({
@@ -21,9 +22,19 @@ const chatSlice = createSlice({
       state.messages = []
       state.prediction = null
       state.probability = null
+      state.currentSessionId = null
+    },
+    setCurrentSessionId: (state, action) => {
+      state.currentSessionId = action.payload
+    },
+    loadSession: (state, action) => {
+      state.messages = action.payload.messages
+      state.prediction = action.payload.prediction ?? null
+      state.probability = action.payload.probability ?? null
+      state.currentSessionId = action.payload.sessionId
     },
   },
 })
 
-export const { addMessage, setPrediction, clearChat } = chatSlice.actions
+export const { addMessage, setPrediction, clearChat, setCurrentSessionId, loadSession } = chatSlice.actions
 export default chatSlice.reducer
