@@ -12,7 +12,16 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+
+def get_groq_client():
+    """Lazy-load Groq client to avoid import-time errors"""
+    if not GROQ_API_KEY:
+        return None
+    try:
+        return Groq(api_key=GROQ_API_KEY)
+    except Exception as e:
+        logger.error(f"Failed to initialize Groq client: {e}")
+        return None
 
 SYSTEM_PROMPT = """You are CareerSense AI, a career advisor for IT students at FUOYE, Nigeria.
 Goal: predict the user's ideal IT career in max 4 exchanges.
@@ -27,6 +36,7 @@ Use defaults (5 for numeric, "Python"/"Web Technologies") for anything unknown."
 
 class ChatbotView(APIView):
     def post(self, request):
+        client = get_groq_client()
         if not client:
             return Response(
                 {'response': 'AI service not configured.', 'error': 'Missing GROQ_API_KEY'},
