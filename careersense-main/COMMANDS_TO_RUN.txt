@@ -1,0 +1,123 @@
+================================================
+CAREERSENSE FREE DEPLOYMENT - ALL COMMANDS
+================================================
+
+Copy and paste these commands one by one!
+
+================================================
+STEP 1: PUSH TO GITHUB
+================================================
+
+1. Open Command Prompt and run:
+
+cd "c:\Users\USER\Downloads\careersense-main\careersense-main"
+git init
+git add .
+git commit -m "Initial deployment commit"
+
+2. Create repository on GitHub:
+   - Go to: https://github.com/new
+   - Name: careersense
+   - Make it PUBLIC
+   - Click "Create repository"
+
+3. Push to GitHub (replace YOUR_GITHUB_USERNAME):
+
+git remote add origin https://github.com/YOUR_GITHUB_USERNAME/careersense.git
+git branch -M main
+git push -u origin main
+
+================================================
+STEP 2: DEPLOY BACKEND (RENDER)
+================================================
+
+1. Go to: https://render.com/dashboard
+2. Click: "New +" → "Web Service"
+3. Connect your GitHub repo
+4. Settings:
+   - Name: careersense-backend
+   - Root Directory: Prediction
+   - Environment: Python 3
+   - Build Command: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+   - Start Command: gunicorn backend.wsgi:application
+
+5. Environment Variables (add these 4):
+   GROQ_API_KEY=your_groq_api_key_here
+   SECRET_KEY=render-prod-key-change-later
+   DEBUG=False
+   PYTHON_VERSION=3.11.0
+
+6. Click "Create Web Service"
+7. COPY YOUR BACKEND URL (e.g., https://careersense-backend.onrender.com)
+
+================================================
+STEP 3: UPDATE FRONTEND & PUSH
+================================================
+
+1. Edit Frontend/.env and replace with YOUR backend URL:
+
+VITE_API_URL=https://careersense-backend.onrender.com
+
+2. Push the change:
+
+cd "c:\Users\USER\Downloads\careersense-main\careersense-main"
+git add Frontend/.env
+git commit -m "Update API URL for production"
+git push
+
+================================================
+STEP 4: DEPLOY FRONTEND (VERCEL)
+================================================
+
+1. Go to: https://vercel.com/new
+2. Import your GitHub repo
+3. Settings:
+   - Framework: Vite
+   - Root Directory: Frontend
+   - Build Command: npm run build
+   - Output Directory: dist
+
+4. Add Environment Variable:
+   - Key: VITE_API_URL
+   - Value: https://careersense-backend.onrender.com (YOUR URL!)
+
+5. Click "Deploy"
+
+================================================
+DONE! 🎉
+================================================
+
+Your app is live at:
+- Frontend: https://careersense.vercel.app (your Vercel URL)
+- Backend: https://careersense-backend.onrender.com (your Render URL)
+
+Note: Backend sleeps after 15 min (free tier).
+First request takes 30-50 seconds to wake up.
+
+================================================
+TO UPDATE YOUR APP LATER:
+================================================
+
+cd "c:\Users\USER\Downloads\careersense-main\careersense-main"
+git add .
+git commit -m "Your changes"
+git push
+
+Both platforms auto-deploy! 🚀
+
+================================================
+TROUBLESHOOTING:
+================================================
+
+Backend not working?
+- Check Render logs: Dashboard → Your Service → Logs
+- Verify GROQ_API_KEY is correct
+
+Frontend can't connect?
+- Check VITE_API_URL in Vercel settings
+- Make sure backend URL is correct
+- Wait 30-50 sec if backend was sleeping
+
+For detailed help, see: DEPLOY_NOW.md
+
+================================================

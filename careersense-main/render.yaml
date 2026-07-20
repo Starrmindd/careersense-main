@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: careersense-backend
+    env: python
+    region: oregon
+    buildCommand: cd Prediction && pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+    startCommand: cd Prediction && gunicorn backend.wsgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DEBUG
+        value: False
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+    healthCheckPath: /
