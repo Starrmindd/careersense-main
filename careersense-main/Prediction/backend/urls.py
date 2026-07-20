@@ -8,6 +8,6 @@ urlpatterns = [
     path('', health_check, name='health_check'),
     path('api/',include('prediction.urls')),   
     path('api/',include('chatapp.urls')),
-    path('api/',include('voiceapp.urls')),
+    # path('api/',include('voiceapp.urls')),  # Disabled for production - requires speech packages
     
 ]

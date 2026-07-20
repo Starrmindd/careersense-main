@@ -36,7 +36,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'prediction',
     'chatapp',
-    'voiceapp',
+    # 'voiceapp',  # Disabled for production - requires speech packages
     'rest_framework',
     'corsheaders',
 ]
